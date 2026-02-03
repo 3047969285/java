@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket测试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        #messages {
+            border: 1px solid #ccc;
+            height: 400px;
+            overflow-y: scroll;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
+        }
+        .message {
+            margin: 5px 0;
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        .event-message {
+            background-color: #e8f4fd;
+            border-left: 3px solid #2196F3;
+        }
+        .chat-message {
+            background-color: #f0f0f0;
+            border-left: 3px solid #4CAF50;
+        }
+        .system-message {
+            background-color: #fff3e0;
+            border-left: 3px solid #FF9800;
+        }
+        #connectButton, #disconnectButton {
+            padding: 10px 15px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        #connectButton {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+        }
+        #disconnectButton {
+            background-color: #f44336;
+            color: white;
+            border: none;
+        }
+        .button-group {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>WebSocket聊天室测试</h1>
+    
+    <div class="button-group">
+        <button id="connectButton">连接服务器</button>
+        <button id="disconnectButton">断开连接</button>
+    </div>
+    
+    <div id="messages"></div>
+    
+    <div>
+        <h3>手动添加事件测试</h3>
+        <label for="timeInput">时间:</label>
+        <input type="text" id="timeInput" placeholder="例如: 2025-11-20 10:30:00"><br><br>
+        
+        <label for="locationInput">地点:</label>
+        <input type="text" id="locationInput" placeholder="例如: 北京"><br><br>
+        
+        <label for="incidentInput">事件:</label>
+        <input type="text" id="incidentInput" placeholder="例如: 火灾警报"><br><br>
+        
+        <button onclick="addCustomEvent()">添加自定义事件</button>
+    </div>
+
+    <script>
+        let socket;
+        
+        document.getElementById('connectButton').onclick = function() {
+            connect();
+        };
+        
+        document.getElementById('disconnectButton').onclick = function() {
+            disconnect();
+        };
+        
+        function connect() {
+            // 连接到WebSocket服务器
+            socket = new WebSocket('ws://localhost:8081/ws');
+            
+            // 连接打开时触发
+            socket.onopen = function(event) {
+                addMessage('已连接到服务器', 'system-message');
+            };
+            
+            // 收到消息时触发
+            socket.onmessage = function(event) {
+                const message = event.data;
+                // 对于事件消息，只显示内容，不添加额外格式
+                addMessage(message, 'event-message');
+            };
+            
+            // 连接关闭时触发
+            socket.onclose = function(event) {
+                addMessage('与服务器的连接已断开', 'system-message');
+            };
+            
+            // 出错时触发
+            socket.onerror = function(error) {
+                addMessage('连接出错: ' + error, 'system-message');
+            };
+        }
+        
+        function disconnect() {
+            if (socket) {
+                socket.close();
+            }
+        }
+        
+        function addMessage(message, className) {
+            const messagesDiv = document.getElementById('messages');
+            const messageElement = document.createElement('div');
+            messageElement.className = 'message ' + className;
+            // 只显示消息内容，不添加时间戳前缀
+            messageElement.textContent = message;
+            messagesDiv.appendChild(messageElement);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        function addCustomEvent() {
+            const time = document.getElementById('timeInput').value || new Date().toLocaleString();
+            const location = document.getElementById('locationInput').value || '未知地点';
+            const incident = document.getElementById('incidentInput').value || '未指定事件';
+            
+            // 直接通过WebSocket发送消息（模拟客户端发送消息）
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                // 创建一个简单的消息对象
+                const messageObj = {
+                    content: `${time} ${location} ${incident}`,
+                    sender: "TestUser"
+                };
+                socket.send(JSON.stringify(messageObj));
+            } else {
+                alert('请先连接到服务器');
+            }
+        }
+        
+        // 页面加载完成后自动连接
+        window.onload = function() {
+            connect();
+        };
+    </script>
+</body>
+</html>
